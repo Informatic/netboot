@@ -1,0 +1,93 @@
+#!/bin/bash
+
+## === Default configuration
+CONF_DHCP_BOOT="/pxelinux.0"
+CONF_IFACE="eth0"
+CONF_IFACE_ADDR="10.5.2.1/24"
+DIR_BASE="$(readlink -f `dirname $BASH_SOURCE`/..)"
+DIR_TFTPROOT="$DIR_BASE/data/tftproot"
+DIR_IMAGES="$DIR_BASE/data/images"
+DIR_CONF="$DIR_BASE/conf"
+DIR_HOOKS="$DIR_BASE/scripts/hooks"
+
+manage_networking=false
+[[ -n "$CONF_IFACE" ]] && [[ -n "$CONF_IFACE_ADDR" ]] && manage_networking=true
+
+## === Colorized logging
+loglevel_colors=("37;44" "37;41" "30;42")
+log()
+{
+	local loglevel=$1
+	local colorcode="${loglevel_colors[$loglevel]}"
+	shift
+	echo -e " \x1b[${colorcode}m--[[\x1b[0m $* \x1b[${colorcode}m]]--\x1b[0m"
+}
+
+## === Simple atexit hooks system
+declare -a atexit_hooks
+cleanup()
+{
+	for hook in "${atexit_hooks[@]}"; do
+		$hook
+	done
+	atexit_hooks=()
+	return 0
+}
+
+atexit()
+{
+	atexit_hooks=("$*" "${atexit_hooks[@]}")
+}
+
+sigint_trap()
+{
+	echo -e "\r"
+	log 0 "Exiting..."
+	cleanup
+	exit $?
+}
+
+trap cleanup EXIT
+trap sigint_trap SIGINT
+
+## === Network handling
+net_setup()
+{
+	log 0 "Setting up networking"
+	ifconfig $CONF_IFACE $CONF_IFACE_ADDR up || return $?
+	atexit net_cleanup
+	return 0
+}
+
+net_cleanup()
+{
+	log 0 "Cleaning up networking"
+	ifconfig $CONF_IFACE down || return $?
+	return 0
+}
+
+## === Images handling
+list_images()
+{
+	ls $DIR_IMAGES
+}
+
+image_setup()
+{
+	image_name=$1
+	log 0 "Setting up image $image_name"
+	atexit image_cleanup $image_name
+}
+
+image_cleanup()
+{
+	image_name=$1
+	log 0 "Cleaning up image $image_name"
+}
+
+images_setup()
+{
+	for image_name in $(list_images); do
+		image_setup $image_name || log 1 "Image $image_name setup failed"
+	done
+}

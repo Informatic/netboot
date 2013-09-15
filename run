@@ -1,0 +1,25 @@
+#!/bin/bash
+
+. $(readlink -f `dirname $0`)/scripts/common
+
+for image in $(ls $DIR_IMAGES); do
+	echo "	* $image - hehe"
+done
+
+images_setup
+
+$manage_networking && net_setup
+
+# exit 1
+log 0 "Starting dnsmasq..."
+
+dnsmasq --conf-file="$DIR_CONF/dnsmasq.conf" \
+        --bind-interfaces \
+        --enable-tftp \
+        --tftp-root="$DIR_TFTPROOT" \
+        --dhcp-boot=$CONF_DHCP_BOOT \
+        --no-daemon \
+        --log-dhcp \
+        --dhcp-script="$DIR_HOOKS/dhcp-script"
+
+log 0 "Finished with status code $?"

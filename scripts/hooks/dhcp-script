@@ -1,0 +1,10 @@
+#!/bin/bash
+
+. $(readlink -f `dirname $0`)/../common
+action=$1
+address=$3
+
+log 0 "dhcp script running"
+log 0 "action: $action address: $address"
+log 1 "others: $*"
+log 2 "dhcp script exiting"
