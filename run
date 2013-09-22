@@ -2,12 +2,9 @@
 
 . $(readlink -f `dirname $0`)/scripts/common
 
-for image in $(ls $DIR_IMAGES); do
-	echo "	* $image - hehe"
-done
+root_required
 
 images_setup
-
 $manage_networking && net_setup
 
 # exit 1
