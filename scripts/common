@@ -83,12 +83,16 @@ image_setup()
 	image_name=$1
 	log 0 "Setting up image $image_name"
 	atexit image_cleanup $image_name
+	mkdir $DIR_TFTPROOT/boot/$image_name
+	mount --bind $DIR_IMAGES/$image_name/rootfs/boot $DIR_TFTPROOT/boot/$image_name
 }
 
 image_cleanup()
 {
 	image_name=$1
 	log 0 "Cleaning up image $image_name"
+	umount $DIR_TFTPROOT/boot/$image_name
+	rmdir $DIR_TFTPROOT/boot/$image_name
 }
 
 images_setup()
