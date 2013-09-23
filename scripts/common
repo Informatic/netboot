@@ -69,8 +69,8 @@ net_setup()
     ifconfig $CONF_IFACE $CONF_IFACE_ADDR up || return $?
     if [[ ! -z "$CONF_IFACE_NAT" ]]; then
         echo 1 > /proc/sys/net/ipv4/ip_forward
-        iptables -t nat -A POSTROUTING -o $CONF_IFACE_NAT -i $CONF_IFACE -j SNAT --to "$(iface_addr $CONF_IFACE_NAT)"
-        atexit iptables -t nat -D POSTROUTING -o $CONF_IFACE_NAT -i $CONF_IFACE -j SNAT --to "$(iface_addr $CONF_IFACE_NAT)"
+        iptables -t nat -A POSTROUTING -o $CONF_IFACE_NAT -j SNAT --to "$(iface_addr $CONF_IFACE_NAT)"
+        atexit iptables -t nat -D POSTROUTING -o $CONF_IFACE_NAT -j SNAT --to "$(iface_addr $CONF_IFACE_NAT)"
     fi
     atexit net_cleanup
     return 0
