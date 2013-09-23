@@ -4,6 +4,7 @@
 CONF_DHCP_BOOT="/pxelinux.0"
 CONF_IFACE="eth0"
 CONF_IFACE_ADDR="10.5.2.1/24"
+CONF_IFACE_NAT="eth1"
 DIR_BASE="$(readlink -f `dirname $BASH_SOURCE`/..)"
 DIR_TFTPROOT="$DIR_BASE/data/tftproot"
 DIR_IMAGES="$DIR_BASE/data/images"
@@ -57,10 +58,20 @@ trap cleanup EXIT
 trap sigint_trap SIGINT
 
 ## === Network handling
+iface_addr()
+{
+    ifconfig $1 | grep 'inet addr:'| grep -v '127.0.0.1' | cut -d: -f2 | awk '{ print $1 }'
+}
+
 net_setup()
 {
     log 0 "Setting up networking"
     ifconfig $CONF_IFACE $CONF_IFACE_ADDR up || return $?
+    if [[ ! -z "$CONF_IFACE_NAT" ]]; then
+        echo 1 > /proc/sys/net/ipv4/ip_forward
+        iptables -t nat -A POSTROUTING -o $CONF_IFACE_NAT -i $CONF_IFACE -j SNAT --to "$(iface_addr $CONF_IFACE_NAT)"
+        atexit iptables -t nat -D POSTROUTING -o $CONF_IFACE_NAT -i $CONF_IFACE -j SNAT --to "$(iface_addr $CONF_IFACE_NAT)"
+    fi
     atexit net_cleanup
     return 0
 }
