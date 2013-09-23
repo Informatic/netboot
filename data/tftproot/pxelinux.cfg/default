@@ -1,0 +1,7 @@
+UI menu.c32
+TIMEOUT 30
+MENU AUTOBOOT Starting in # seconds...
+
+MENU TITLE This is some random menu
+
+INCLUDE pxelinux.cfg/images.cfg
