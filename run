@@ -6,7 +6,7 @@ root_required
 
 images_setup
 $manage_networking && net_setup
-$DIR_BASE/gen-pxelinux.cfg
+$DIR_BASE/gen-pxelinux-cfg
 
 log 0 "Starting dnsmasq..."
 

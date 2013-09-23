@@ -7,7 +7,6 @@ destfile="$DIR_TFTPROOT/pxelinux.cfg/images.cfg"
 
 for image in $(ls $DIR_TFTPROOT/boot); do
     for kernel_path in $(ls $DIR_TFTPROOT/boot/$image/vmlinuz-*); do
-        #echo "$image - $kernel_path"
         initrd_path="$(echo $kernel_path | sed -r 's|(.*)/vmlinuz([^/]*)|\1/initrd.img\2|')"
         kernel_name="$(basename $kernel_path)"
         initrd_name="$(basename $initrd_path)"
@@ -20,6 +19,7 @@ for image in $(ls $DIR_TFTPROOT/boot); do
             echo -e "\tKERNEL boot/$image/$kernel_name"
             echo -e "\tAPPEND initrd=boot/$image/$initrd_name root=/dev/nfs ip=::::diskless:eth0:dhcp nfsroot=$if_addr:$DIR_IMAGES/$image/rootfs"
             ) >> $destfile
+        else
             log 1 "$image: no initrd found for `basename $kernel_path`" >&2
         fi
     done
