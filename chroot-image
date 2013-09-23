@@ -1,0 +1,11 @@
+#!/bin/bash
+
+. $(readlink -f `dirname $0`)/scripts/common
+
+root_required
+image_name="$1"
+shift
+[[ -z "$image_name" ]] && echo "usage: chroot-image [imagename]" && exit 1
+[[ ! -d "$DIR_IMAGES/$image_name/rootfs" ]] && echo "No image found" && exit 2
+
+chroot $DIR_IMAGES/$image_name/rootfs $*

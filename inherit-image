@@ -1,0 +1,15 @@
+#!/bin/bash
+
+. $(readlink -f `dirname $0`)/scripts/common
+
+root_required
+
+[[ -z "$1" || -z "$2" ]] && echo "usage: inherit-image [source-imagename] [dest-imagename]" && exit 1
+[[ ! -d "$DIR_IMAGES/$1/rootfs" ]] && echo "No image found" && exit 2
+[[ -d "$DIR_IMAGES/$2" ]] && echo "Image already exists" && exit 2
+
+mkdir $DIR_IMAGES/$2
+ln -s ../$1/rootfs $DIR_IMAGES/$2/base
+mkdir $DIR_IMAGES/$2/overlay
+mkdir $DIR_IMAGES/$2/rootfs
+echo "rw" > $DIR_IMAGES/$2/accessmode
