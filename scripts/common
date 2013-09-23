@@ -84,12 +84,14 @@ image_setup()
 	log 0 "Setting up image $image_name"
 	atexit image_cleanup $image_name
     image_path="$DIR_IMAGES/$image_name"
+    [[ -x "$DIR_IMAGES/$image_name/hook-precleanup" ]] && source $DIR_IMAGES/$image_name/hook-presetup
     [[ -d "$image_path/overlay" ]] && [[ -d "$image_path/base" ]] && log 0 "Mounting overlayed $image_name image" && mount -t aufs -o br=$image_path/overlay:$image_path/base=ro,xino=$image_path/.aufs.xino none $image_path/rootfs
 	mkdir $DIR_TFTPROOT/boot/$image_name
 	mount --bind $image_path/rootfs/boot $DIR_TFTPROOT/boot/$image_name
     accessmode="ro"
     [[ -f "$image_path/accessmode" ]] && accessmode="$( cat $image_path/accessmode)"
     echo "$image_path/rootfs *(no_subtree_check,$accessmode,no_root_squash,fsid=0,insecure,sync,crossmnt)" > /etc/exports.d/netboot-$image_name.exports
+    [[ -x "$DIR_IMAGES/$image_name/hook-precleanup" ]] && source $DIR_IMAGES/$image_name/hook-postsetup
 }
 
 image_cleanup()
@@ -97,9 +99,11 @@ image_cleanup()
 	image_name=$1
 	log 0 "Cleaning up image $image_name"
     #exportfs -v -u 0.0.0.0:$DIR_IMAGES/$image_name/rootfs
+    [[ -x "$DIR_IMAGES/$image_name/hook-precleanup" ]] && source $DIR_IMAGES/$image_name/hook-precleanup
     rm /etc/exports.d/netboot-$image_name.exports
 	umount $DIR_TFTPROOT/boot/$image_name
 	rmdir $DIR_TFTPROOT/boot/$image_name
+    [[ -x "$DIR_IMAGES/$image_name/hook-precleanup" ]] && source $DIR_IMAGES/$image_name/hook-postcleanup
 }
 
 images_setup()
