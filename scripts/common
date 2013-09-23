@@ -92,6 +92,7 @@ image_setup()
     [[ -f "$image_path/accessmode" ]] && accessmode="$( cat $image_path/accessmode)"
     echo "$image_path/rootfs *(no_subtree_check,$accessmode,no_root_squash,fsid=0,insecure,sync,crossmnt)" > /etc/exports.d/netboot-$image_name.exports
     [[ -x "$DIR_IMAGES/$image_name/hook-precleanup" ]] && source $DIR_IMAGES/$image_name/hook-postsetup
+    return 0
 }
 
 image_cleanup()
