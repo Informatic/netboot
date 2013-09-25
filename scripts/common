@@ -10,7 +10,7 @@ DIR_TFTPROOT="$DIR_BASE/data/tftproot"
 DIR_IMAGES="$DIR_BASE/data/images"
 DIR_CONF="$DIR_BASE/conf"
 DIR_HOOKS="$DIR_BASE/scripts/hooks"
-
+FSID_BASE=9000
 manage_networking=false
 [[ -n "$CONF_IFACE" ]] && [[ -n "$CONF_IFACE_ADDR" ]] && manage_networking=true
 
@@ -106,18 +106,25 @@ image_setup()
     local image_path="$DIR_IMAGES/$image_name"
     
     log 0 "Setting up image $image_name"
-    image_path="$DIR_IMAGES/$image_name"
-    [[ -d "$image_path/overlay" ]] && [[ -d "$image_path/base" ]] && log 0 "Mounting overlayed $image_name image" && {
-        mount -t aufs -o br=$image_path/overlay:$image_path/base=ro,xino=$image_path/.aufs.xino none $image_path/rootfs
-        atexit umount $image_path/rootfs
-    }
-    mkdir $DIR_TFTPROOT/boot/$image_name
-    mount --bind $image_path/rootfs/boot $DIR_TFTPROOT/boot/$image_name
+
     image_hook $image_name presetup
+
+    if [[ -d "$image_path/overlay" ]] && [[ -d "$image_path/base" ]]; then 
+        log 0 "Mounting overlayed $image_name image"
+        mount -t aufs -o br=$image_path/overlay:$image_path/base=ro none $image_path/rootfs
+        # FIXME: executed outside of pre/post-cleanup hooks
+        atexit umount -l $image_path/rootfs
+    fi
+
+    if [[ -d "$image_path/rootfs/boot" ]]; then
+        mkdir $DIR_TFTPROOT/boot/$image_name
+        mount --bind $image_path/rootfs/boot $DIR_TFTPROOT/boot/$image_name
+    fi
 
     local accessmode="ro"
     [[ -f "$image_path/accessmode" ]] && accessmode="$( cat $image_path/accessmode)"
-    echo "$image_path/rootfs *(no_subtree_check,$accessmode,no_root_squash,fsid=0,insecure,sync,crossmnt)" > /etc/exports.d/netboot-$image_name.exports
+    echo "$image_path/rootfs *(no_subtree_check,$accessmode,no_root_squash,insecure,crossmnt,async,fsid=$((`ls /etc/exports.d | wc -l`+$FSID_BASE)))" > /etc/exports.d/netboot-$image_name.exports
+    
     atexit image_cleanup $image_name
 
     image_hook $image_name postsetup
@@ -132,8 +139,11 @@ image_cleanup()
     image_hook $image_name precleanup
 
     rm /etc/exports.d/netboot-$image_name.exports
-    umount $DIR_TFTPROOT/boot/$image_name
-    rmdir $DIR_TFTPROOT/boot/$image_name
+    if [[ -d "$DIR_TFTPROOT/boot/$image_name" ]]; then
+        umount $DIR_TFTPROOT/boot/$image_name
+        rmdir $DIR_TFTPROOT/boot/$image_name
+    fi
+
     image_hook $image_name postcleanup
 
     return 0
@@ -141,6 +151,9 @@ image_cleanup()
 
 images_setup()
 {
+    # atexit is first-in-last-out
+    atexit /etc/init.d/nfs-kernel-server restart
+
     for image_name in $(list_images); do
         image_setup $image_name || log 1 "Image $image_name setup failed"
     done
