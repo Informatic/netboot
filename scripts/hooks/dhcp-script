@@ -3,8 +3,53 @@
 . $(readlink -f `dirname $0`)/../common
 action=$1
 address=$3
+devid=$3
 
-log 0 "dhcp script running"
-log 0 "action: $action address: $address"
-log 1 "others: $*"
-log 2 "dhcp script exiting"
+dev_path="$DIR_DEVICES/$address"
+mkdir -p $dev_path
+
+case "$action" in
+    "tftp")
+        tftpfile="$(readlink -f $4)"
+        if [[ $tftpfile == $DIR_TFTPROOT* ]]; then
+            filename="${tftpfile:${#DIR_TFTPROOT}}"
+            state="`devdb_get "$devid" "state"`"
+            imagename="`devdb_get "$devid" "state"`"
+
+            case "$filename" in
+                "$CONF_DHCP_BOOT")  state="pxe";      imagename="" ;;
+                /pxelinux.cfg/*)    state="pxelinux"; imagename="" ;;
+                /boot/*) state="booting"; imagename="$(echo "$filename" | cut -d "/" -f 3)" ;;
+            esac
+            
+            devdb_set "$devid" "state"     "$state"
+            devdb_set "$devid" "imagename" "$imagename"
+
+            log 2 "Filename is: $filename; boot state is: $state"
+        else
+            log 1 "Seems like file is not in tftproot O_o"
+        fi
+        ;;
+    "old")
+        [[ ! -e "$DIR_DEVICES/$2" ]] && ln -s $address $DIR_DEVICES/$2
+
+        # DNSMASQ_INTERFACE is empty when server is restarted
+        if [[ ! -z "$DNSMASQ_INTERFACE"  ]]; then
+            state="`devdb_get "$devid" "state"`"
+            [[ "$state" == "booting" ]] && state="running"
+            devdb_set "$devid" "state" "$state"
+            devdb_set "$devid" "vendor_class" "$DNSMASQ_VENDOR_CLASS"
+            devdb_set "$devid" "hostname" "$DNSMASQ_SUPPLIED_HOSTNAME"
+        fi
+        ;;
+    *) log 1 "Unknown action"
+esac
+
+#log 0 "action: $action address: $address"
+#log 0 "all: $*"
+#log 0 "DNSMASQ_DOMAIN: $DNSMASQ_DOMAIN"
+#log 0 "DNSMASQ_SUPPLIED_HOSTNAME: $DNSMASQ_SUPPLIED_HOSTNAME"
+#log 0 "DNSMASQ_OLD_HOSTNAME: $DNSMASQ_OLD_HOSTNAME"
+#log 0 "DNSMASQ_INTERFACE: $DNSMASQ_INTERFACE"
+#log 0 "DNSMASQ_TAGS: $DNSMASQ_TAGS"
+#log 0 "DNSMASQ_CLIENT_ID: $DNSMASQ_CLIENT_ID"

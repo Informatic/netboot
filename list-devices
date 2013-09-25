@@ -1,0 +1,11 @@
+#!/bin/bash
+
+. $(readlink -f `dirname $0`)/scripts/common
+
+for devid in $(list_devices); do
+    state="`devdb_get "$devid" "state" "unknown"`" 
+    imagename="`devdb_get "$devid" "imagename" "unknown"`" 
+    lastchange="`stat "$DIR_DEVICES/$devid/state" --format "%y"`"
+
+    printf "%20s | %-10s | %-10s | %s\n" "$devid" "$state" "$imagename" "$lastchange"
+done
