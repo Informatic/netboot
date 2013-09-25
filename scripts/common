@@ -90,25 +90,37 @@ list_images()
     ls $DIR_IMAGES
 }
 
+image_hook()
+{
+    local image_name="$1"
+    local hook_name="$2"
+
+    if [[ -x "$DIR_IMAGES/$image_name/hook-$hook_name" ]]; then
+        source $DIR_IMAGES/$image_name/hook-$hook_name
+    fi
+}
+
 image_setup()
 {
     local image_name="$1"
     local image_path="$DIR_IMAGES/$image_name"
     
     log 0 "Setting up image $image_name"
-    atexit image_cleanup $image_name
     image_path="$DIR_IMAGES/$image_name"
-    [[ -x "$DIR_IMAGES/$image_name/hook-precleanup" ]] && source $DIR_IMAGES/$image_name/hook-presetup
     [[ -d "$image_path/overlay" ]] && [[ -d "$image_path/base" ]] && log 0 "Mounting overlayed $image_name image" && {
         mount -t aufs -o br=$image_path/overlay:$image_path/base=ro,xino=$image_path/.aufs.xino none $image_path/rootfs
         atexit umount $image_path/rootfs
     }
     mkdir $DIR_TFTPROOT/boot/$image_name
     mount --bind $image_path/rootfs/boot $DIR_TFTPROOT/boot/$image_name
+    image_hook $image_name presetup
+
     local accessmode="ro"
     [[ -f "$image_path/accessmode" ]] && accessmode="$( cat $image_path/accessmode)"
     echo "$image_path/rootfs *(no_subtree_check,$accessmode,no_root_squash,fsid=0,insecure,sync,crossmnt)" > /etc/exports.d/netboot-$image_name.exports
-    [[ -x "$DIR_IMAGES/$image_name/hook-precleanup" ]] && source $DIR_IMAGES/$image_name/hook-postsetup
+    atexit image_cleanup $image_name
+
+    image_hook $image_name postsetup
     return 0
 }
 
@@ -117,11 +129,14 @@ image_cleanup()
     local image_name="$1"
 
     log 0 "Cleaning up image $image_name"
-    [[ -x "$DIR_IMAGES/$image_name/hook-precleanup" ]] && source $DIR_IMAGES/$image_name/hook-precleanup
+    image_hook $image_name precleanup
+
     rm /etc/exports.d/netboot-$image_name.exports
     umount $DIR_TFTPROOT/boot/$image_name
     rmdir $DIR_TFTPROOT/boot/$image_name
-    [[ -x "$DIR_IMAGES/$image_name/hook-precleanup" ]] && source $DIR_IMAGES/$image_name/hook-postcleanup
+    image_hook $image_name postcleanup
+
+    return 0
 }
 
 images_setup()
