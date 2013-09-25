@@ -16,11 +16,12 @@ manage_networking=false
 
 ## === Colorized logging
 loglevel_colors=("37;44" "37;41" "30;42")
+
 log()
 {
-    local loglevel=$1
+    local loglevel="$1"; shift
     local colorcode="${loglevel_colors[$loglevel]}"
-    shift
+    
     echo -e " \x1b[${colorcode}m--[[\x1b[0m $* \x1b[${colorcode}m]]--\x1b[0m"
 }
 
@@ -91,7 +92,9 @@ list_images()
 
 image_setup()
 {
-    image_name=$1
+    local image_name="$1"
+    local image_path="$DIR_IMAGES/$image_name"
+    
     log 0 "Setting up image $image_name"
     atexit image_cleanup $image_name
     image_path="$DIR_IMAGES/$image_name"
@@ -102,7 +105,7 @@ image_setup()
     }
     mkdir $DIR_TFTPROOT/boot/$image_name
     mount --bind $image_path/rootfs/boot $DIR_TFTPROOT/boot/$image_name
-    accessmode="ro"
+    local accessmode="ro"
     [[ -f "$image_path/accessmode" ]] && accessmode="$( cat $image_path/accessmode)"
     echo "$image_path/rootfs *(no_subtree_check,$accessmode,no_root_squash,fsid=0,insecure,sync,crossmnt)" > /etc/exports.d/netboot-$image_name.exports
     [[ -x "$DIR_IMAGES/$image_name/hook-precleanup" ]] && source $DIR_IMAGES/$image_name/hook-postsetup
@@ -111,7 +114,8 @@ image_setup()
 
 image_cleanup()
 {
-    image_name=$1
+    local image_name="$1"
+
     log 0 "Cleaning up image $image_name"
     [[ -x "$DIR_IMAGES/$image_name/hook-precleanup" ]] && source $DIR_IMAGES/$image_name/hook-precleanup
     rm /etc/exports.d/netboot-$image_name.exports
