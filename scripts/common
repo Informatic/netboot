@@ -8,6 +8,7 @@ CONF_IFACE_NAT="eth1"
 DIR_BASE="$(readlink -f `dirname $BASH_SOURCE`/..)"
 DIR_TFTPROOT="$DIR_BASE/data/tftproot"
 DIR_IMAGES="$DIR_BASE/data/images"
+DIR_DEVICES="$DIR_BASE/data/devices"
 DIR_CONF="$DIR_BASE/conf"
 DIR_HOOKS="$DIR_BASE/scripts/hooks"
 FSID_BASE=9000
@@ -157,5 +158,34 @@ images_setup()
     for image_name in $(list_images); do
         image_setup $image_name || log 1 "Image $image_name setup failed"
     done
+
     /etc/init.d/nfs-kernel-server restart
+}
+
+# === Devices handling
+list_devices()
+{
+    ls $DIR_DEVICES
+}
+
+devdb_set()
+{
+    local devid="$1"; shift
+    local key="$1"; shift
+
+    echo "$*" > $DIR_DEVICES/$devid/$key
+}
+
+devdb_get()
+{
+    local devid="$1"; shift
+    local key="$1"; shift
+    local default_value="$1"; shift
+    local keypath="$DIR_DEVICES/$devid/$key"
+
+    if [[ -f "$keypath" ]]; then
+        cat $keypath
+    else
+        echo $default_value
+    fi
 }
