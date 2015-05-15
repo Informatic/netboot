@@ -1,0 +1,21 @@
+#!/bin/bash
+
+. $(readlink -f `dirname $0`)/scripts/common
+
+root_required
+
+[[ -z "$1" ]] && echo "usage: bootstrap-debian [imagename] {release} {repository}" && exit 1
+
+imagename="$1"; shift
+release="${1:-stable}"; shift
+repository="${1:-http://ftp.us.debian.org/debian}"; shift
+
+rootfspath="$DIR_IMAGES/$imagename/rootfs"
+
+log 2 "deboostrap"
+debootstrap $release $rootfspath $repository
+
+log 2 "customisation"
+chroot $rootfspath apt-get install -y --force-yes linux-image-amd64
+echo "$imagename" >> $rootfspath/etc/hostname
+echo "127.0.0.1 $imagename" >> $rootfspath/etc/hosts
